@@ -2,12 +2,14 @@ import cv2 as cv
 import urllib.request
 import numpy as np
 import math
+from physics import PH
 
 class RunThrough():
 
     def __init__(self):
         """initialize variables"""
-        self.url = 'http://192.168.227.194/cam-hi.jpg'
+        self.url = 'http://192.168.169.194/cam-hi.jpg'
+        self.x =0 #iterator
         self.max_a = 9000
         self.min_a = 100
         self.tarx = 0
@@ -16,11 +18,11 @@ class RunThrough():
         self.t_radius = 0
         self.THx = 400
         self.THy = 300
-        self.arrow_mass = .0162
-        self.force = 197.94
-        self.l_angle = 0
-        
-        
+        self.dist_angle = 1.051650213
+        self.PH = PH()
+        self.distance = 0
+        self.real_ang = 1.5211059
+
     def empty(self, x):
         pass
 
@@ -78,6 +80,8 @@ class RunThrough():
                     objCor = len(approx)
                     x, y, w, h = cv.boundingRect(approx)
 
+                    self.calc_distance(width=w)
+
                     self.tarx, self.tary = (x +(w//2)), ((y)-(h//2))
 
                     self.c_vector = math.isqrt(int((((300-self.tary))**2)+
@@ -92,16 +96,20 @@ class RunThrough():
 
                     cv.rectangle(self.img, (x,y), (x+w, y+h), (0,255,0), 1)
 
-                    self.create_cross()
+                    self.calc_distance(width=w)
+                    # self.calc_arrow_drop(y_val=h)
+                    #print(self.calc_arrow_drop(y_val=h))
+                    #
+                    self.create_cross(drop=self.calc_arrow_drop(y_val=h))
 
                     if objCor>=8: objectType= "circle"
                     else:
                         objectType="not_target"
                     
-                    print(f"distance between = {self.c_vector-(self.t_radius-10)}")
+                    #print(f"distance between = {self.c_vector-(self.t_radius-10)}")
 
                     if objectType == "circle":
-                        if self.c_vector >= self.t_radius-10:
+                        if self.c_vector >= self.t_radius:
                             cv.putText(self.img, miss_notif, (x+(w//2)-10, y+(h//2)-10), cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
                             
                         else:
@@ -114,11 +122,45 @@ class RunThrough():
             
             cv.waitKey(1)
     
-    def create_cross(self, size=2, vposx=0, vposy=0):
+    def create_cross(self, size=2, vposx=0, vposy=0, drop=0): #drop uses physics to see how much lower it'll be
         """when called, alter CH position"""
         cv.rectangle(self.img, (self.THx-1+vposx, self.THy-1+vposy),
                     (self.THx+1+vposx, self.THy+1+vposy), (255, 0, 0), size)
+        cv.rectangle(self.img, (self.THx-1+vposx, self.THy-1+vposy+drop),
+                    (self.THx+1+vposx, self.THy+1+vposy+drop), (0, 255, 0), size)
 
+    def calc_distance(self, width):
+        self.distance = math.tan(width/self.dist_angle)
+        self.x+=1
+        
+        if self.distance<0:
+            self.distance=0
+        if self.x==5:
+            print(f"currently at distance {self.distance}")
+            self.x=0
+
+        
+
+    def calc_arrow_drop(self, y_val): #y_val is the y distance value for target: h 
+        """grabs the angle and the velocity to find how far the 
+        arrow will fall from the distance to the target
+        
+        lots of conversion between feet and pixels"""
+
+        #grab the angle from the other program
+        t_t_h = self.distance/self.PH.calc_speed() #stands for time to hit // I don't think this works
+        downward_vel = self.PH.calc_speed()*math.tan(self.PH.l_angle)
+        dist_lower = t_t_h*downward_vel
+
+        #convert actual distance to pixels on screen, based on how far away I'm standing. 
+
+        # GO HOME && MEASURE THE X AND Y AXIS OF TARGET (PINK PART) AND COMPARE THAT 
+        # at the 11 meters it should mean .2921 meters is 17 pxls or whatever
+        y = math.tan(self.real_ang)*self.dist_angle
+
+        pixels_down = (y_val*dist_lower)/y
+        return(int(pixels_down))
+        
 
 if __name__ == "__main__":
     RT = RunThrough()
