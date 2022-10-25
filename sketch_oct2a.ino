@@ -1,3 +1,6 @@
+// originally for the esp32 camera - no longer in use, so a useless file
+
+
 #include <WebServer.h>
 #include <WiFi.h>
 #include <esp32cam.h>
