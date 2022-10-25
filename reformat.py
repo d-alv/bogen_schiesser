@@ -45,13 +45,25 @@ class RunThrough():
 
     def runner(self):
         self.setup()
+        frame = cv.VideoCapture(0)
+        frame_width = 800
+        frame_height = 600
+        frame.set(3, frame_width)
+        frame.set(4, frame_height)
+
+
         # self.create_cross()
         while True:
+
+            ret, self.img = frame.read()
+            if ret == False:
+                print("not getting signal from camera!")
+                break
             print(self.Angle.analog_read()) #continuously gets the angle :)
 
-            img_resp=urllib.request.urlopen(self.url)
-            imgnp=np.array(bytearray(img_resp.read()), dtype=np.uint8)
-            self.img=cv.imdecode(imgnp, -1)
+            # img_resp=urllib.request.urlopen(self.url)
+            # imgnp=np.array(bytearray(img_resp.read()), dtype=np.uint8)
+            # self.img=cv.imdecode(imgnp, -1)
 
             imgBlur = cv.GaussianBlur(self.img, (7,7), 1)
 
