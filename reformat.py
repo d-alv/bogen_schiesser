@@ -1,8 +1,11 @@
+""" pay attention to 91 and 92"""
+
 import cv2 as cv
 import urllib.request
 import numpy as np
 import math
 from physics import PH
+from angle import Angle
 
 class RunThrough():
 
@@ -22,6 +25,7 @@ class RunThrough():
         self.PH = PH()
         self.distance = 0
         self.real_ang = 1.5211059
+        self.Angle = Angle()
 
     def empty(self, x):
         pass
@@ -43,6 +47,8 @@ class RunThrough():
         self.setup()
         # self.create_cross()
         while True:
+            print(self.Angle.analog_read()) #continuously gets the angle :)
+
             img_resp=urllib.request.urlopen(self.url)
             imgnp=np.array(bytearray(img_resp.read()), dtype=np.uint8)
             self.img=cv.imdecode(imgnp, -1)
@@ -85,9 +91,11 @@ class RunThrough():
                     self.tarx, self.tary = (x +(w//2)), ((y)-(h//2))
 
                     self.c_vector = math.isqrt(int((((300-self.tary))**2)+
-                                        (((400 - self.tarx))**2)))
-                    self.t_radius = math.isqrt(int((abs(self.tary-(y+h))**2) + 
-                                        (abs(self.tarx-(x+w))**2)))
+                                        (((400 - self.tarx))**2))) #measures in accordance to 
+                                        # center of screen ^^^^^
+                    self.t_radius = math.isqrt(int((abs(self.tary-((y+h)//4)**2) + 
+                                        (abs(self.tarx-((x+w)//4))**2))))
+                                
 
                     # print(self.c_vector, self.t_radius)
 
@@ -95,6 +103,10 @@ class RunThrough():
                     miss_notif = "miss"
 
                     cv.rectangle(self.img, (x,y), (x+w, y+h), (0,255,0), 1)
+
+                    ############################# create precision box
+                    cv.rectangle(self.img, (int(x+(w*.25)),int(y+(h*.25))), 
+                                (int(x+(w*.75)), int(y+(h*.75))), (0, 0, 255), 1)
 
                     self.calc_distance(width=w)
                     # self.calc_arrow_drop(y_val=h)
@@ -123,9 +135,11 @@ class RunThrough():
             cv.waitKey(1)
     
     def create_cross(self, size=2, vposx=0, vposy=0, drop=0): #drop uses physics to see how much lower it'll be
-        """when called, alter CH position"""
+        """when called, alter CH position; first box is where bow aiming,
+            second is arrow's expected hit point"""
         cv.rectangle(self.img, (self.THx-1+vposx, self.THy-1+vposy),
                     (self.THx+1+vposx, self.THy+1+vposy), (255, 0, 0), size)
+
         cv.rectangle(self.img, (self.THx-1+vposx, self.THy-1+vposy+drop),
                     (self.THx+1+vposx, self.THy+1+vposy+drop), (0, 255, 0), size)
 
@@ -149,8 +163,16 @@ class RunThrough():
 
         #grab the angle from the other program
         t_t_h = self.distance/self.PH.calc_speed() #stands for time to hit // I don't think this works
-        downward_vel = self.PH.calc_speed()*math.tan(self.PH.l_angle)
-        dist_lower = t_t_h*downward_vel
+        upward_vel = self.PH.calc_speed()*math.sin(abs(self.Angle.rad))
+        if self.Angle.rad >0:
+            pass
+        elif self.Angle.rad<0:
+            upward_vel = -1*upward_vel
+
+        dist_lower =  (t_t_h*upward_vel) + (.5*(-9.81)*(t_t_h**2))
+
+        # dist_lower value is negative, meaning just add it to the other stuff
+
 
         #convert actual distance to pixels on screen, based on how far away I'm standing. 
 
@@ -158,9 +180,10 @@ class RunThrough():
         # at the 11 meters it should mean .2921 meters is 17 pxls or whatever
         y = math.tan(self.real_ang)*self.dist_angle
 
+        # not sure how this works ^ check later
+
         pixels_down = (y_val*dist_lower)/y
         return(int(pixels_down))
-        
 
 if __name__ == "__main__":
     RT = RunThrough()
