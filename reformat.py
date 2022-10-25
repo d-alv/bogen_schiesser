@@ -6,6 +6,11 @@ import numpy as np
 import math
 from physics import PH
 from angle import Angle
+import time
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+
+#camera = PiCamera()
 
 class RunThrough():
 
@@ -26,14 +31,15 @@ class RunThrough():
         self.distance = 0
         self.real_ang = 1.5211059
         self.Angle = Angle()
+        self.camera=PiCamera()
 
     def empty(self, x):
         pass
 
     def setup(self):
 
-        cv.namedWindow("trackbars")
-        cv.resizeWindow("trackbars", 640, 240)
+        cv.namedWindow("trackbars", cv.WINDOW_NORMAL)
+        cv.resizeWindow("trackbars", 240, 240)
         #########################################
         cv.createTrackbar("Hue Min", "trackbars", 127,179, self.empty)
         cv.createTrackbar("Hue Max", "trackbars",171,179, self.empty)
@@ -44,107 +50,128 @@ class RunThrough():
         #########################################
 
     def runner(self):
+        cv.startWindowThread()
         self.setup()
-        frame = cv.VideoCapture(0)
-        frame_width = 800
-        frame_height = 600
-        frame.set(3, frame_width)
-        frame.set(4, frame_height)
+        #frame = cv.VideoCapture(0)
+        #frame_width = 800
+        #frame_height = 600
+        #frame.set(3, frame_width)
+        #frame.set(4, frame_height)
+        #time.sleep(1)
+        
+        
+        
+        self.camera.resolution = (800, 600)
+        self.camera.framerate=60
+        rawCapture = PiRGBArray(self.camera, size=(800,600))
 
+        time.sleep(.1)
 
         # self.create_cross()
         while True:
+            
+            for frame in self.camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+                self.img = frame.array
+                
+                
+                
+                
 
-            ret, self.img = frame.read()
-            if ret == False:
-                print("not getting signal from camera!")
-                break
-            print(self.Angle.analog_read()) #continuously gets the angle :)
+                #self.img = frame.read()
+                #if ret == False:
+                    #print("not getting signal from camera!")
+                    #break
+                #print(self.Angle.analog_read()) #STOPS PROGRAM!!!
+                #print("after angle")
+                # img_resp=urllib.request.urlopen(self.url)
+                # imgnp=np.array(bytearray(img_resp.read()), dtype=np.uint8)
+                # self.img=cv.imdecode(imgnp, -1)
 
-            # img_resp=urllib.request.urlopen(self.url)
-            # imgnp=np.array(bytearray(img_resp.read()), dtype=np.uint8)
-            # self.img=cv.imdecode(imgnp, -1)
+                imgBlur = cv.GaussianBlur(self.img, (7,7), 1)
+                #print("after blur")
+                img_hsv = cv.cvtColor(imgBlur, cv.COLOR_BGR2HSV)
 
-            imgBlur = cv.GaussianBlur(self.img, (7,7), 1)
+                h_min = cv.getTrackbarPos("Hue Min", "trackbars")
+                s_min = cv.getTrackbarPos("Sat Min", "trackbars")
+                v_min = cv.getTrackbarPos("Val Min", "trackbars")
+            
+                h_max = cv.getTrackbarPos("Hue Max", "trackbars")
+                s_max = cv.getTrackbarPos("Sat Max", "trackbars")
+                v_max = cv.getTrackbarPos("Val Max", "trackbars")
+            
+                lower = np.array([h_min, s_min, v_min])
+                upper = np.array([h_max, s_max, v_max])
 
-            img_hsv = cv.cvtColor(imgBlur, cv.COLOR_BGR2HSV)
+                mask = cv.inRange(img_hsv, lower, upper) 
+                imgresult = cv.bitwise_and(self.img, self.img, mask=mask)
 
-            h_min = cv.getTrackbarPos("Hue Min", "trackbars")
-            s_min = cv.getTrackbarPos("Sat Min", "trackbars")
-            v_min = cv.getTrackbarPos("Val Min", "trackbars")
-        
-            h_max = cv.getTrackbarPos("Hue Max", "trackbars")
-            s_max = cv.getTrackbarPos("Sat Max", "trackbars")
-            v_max = cv.getTrackbarPos("Val Max", "trackbars")
-        
-            lower = np.array([h_min, s_min, v_min])
-            upper = np.array([h_max, s_max, v_max])
+                cnts, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+                #print("got here")
+                for c in cnts:
+                    area = cv.contourArea(c)
+                    if self.max_a >area and area>self.min_a:
+                        
+                        cv.drawContours(self.img, [c], -1, (255,0,0), 1)
+                        M = cv.moments(c)
+                        cx = int(M["m10"]/ M["m00"])
+                        cy = int(M["m01"]/ M["m00"])
+                        peri = cv.arcLength(c, True)
+                        approx = cv.approxPolyDP(c, .02*peri, True)
+                        objCor = len(approx)
+                        x, y, w, h = cv.boundingRect(approx)
 
-            mask = cv.inRange(img_hsv, lower, upper) 
-            imgresult = cv.bitwise_and(self.img, self.img, mask=mask)
+                        self.calc_distance(width=w)
 
-            cnts, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+                        self.tarx, self.tary = (x +(w//2)), ((y)-(h//2))
 
-            for c in cnts:
-                area = cv.contourArea(c)
-                if self.max_a >area and area>self.min_a:
-                    
-                    cv.drawContours(self.img, [c], -1, (255,0,0), 1)
-                    M = cv.moments(c)
-                    cx = int(M["m10"]/ M["m00"])
-                    cy = int(M["m01"]/ M["m00"])
-                    peri = cv.arcLength(c, True)
-                    approx = cv.approxPolyDP(c, .02*peri, True)
-                    objCor = len(approx)
-                    x, y, w, h = cv.boundingRect(approx)
+                        self.c_vector = int(math.sqrt(int((((300-self.tary))**2)+
+                                            (((400 - self.tarx))**2)))) #measures in accordance to 
+                                            # center of screen ^^^^^
+                        self.t_radius = int(math.sqrt(int((abs(self.tary-((y+h)//4)**2) + 
+                                            (abs(self.tarx-((x+w)//4))**2)))))
+                                    
 
-                    self.calc_distance(width=w)
+                        # print(self.c_vector, self.t_radius)
 
-                    self.tarx, self.tary = (x +(w//2)), ((y)-(h//2))
+                        hit_notif = "hit"
+                        miss_notif = "miss"
 
-                    self.c_vector = math.isqrt(int((((300-self.tary))**2)+
-                                        (((400 - self.tarx))**2))) #measures in accordance to 
-                                        # center of screen ^^^^^
-                    self.t_radius = math.isqrt(int((abs(self.tary-((y+h)//4)**2) + 
-                                        (abs(self.tarx-((x+w)//4))**2))))
-                                
+                        cv.rectangle(self.img, (x,y), (x+w, y+h), (0,255,0), 1)
 
-                    # print(self.c_vector, self.t_radius)
+                        ############################# create precision box
+                        cv.rectangle(self.img, (int(x+(w*.25)),int(y+(h*.25))), 
+                                    (int(x+(w*.75)), int(y+(h*.75))), (0, 0, 255), 1)
 
-                    hit_notif = "hit"
-                    miss_notif = "miss"
+                        self.calc_distance(width=w)
+                        # self.calc_arrow_drop(y_val=h)
+                        #print(self.calc_arrow_drop(y_val=h))
+                        #
+                        self.create_cross(drop=self.calc_arrow_drop(y_val=h))
 
-                    cv.rectangle(self.img, (x,y), (x+w, y+h), (0,255,0), 1)
-
-                    ############################# create precision box
-                    cv.rectangle(self.img, (int(x+(w*.25)),int(y+(h*.25))), 
-                                (int(x+(w*.75)), int(y+(h*.75))), (0, 0, 255), 1)
-
-                    self.calc_distance(width=w)
-                    # self.calc_arrow_drop(y_val=h)
-                    #print(self.calc_arrow_drop(y_val=h))
-                    #
-                    self.create_cross(drop=self.calc_arrow_drop(y_val=h))
-
-                    if objCor>=8: objectType= "circle"
-                    else:
-                        objectType="not_target"
-                    
-                    #print(f"distance between = {self.c_vector-(self.t_radius-10)}")
-
-                    if objectType == "circle":
-                        if self.c_vector >= self.t_radius:
-                            cv.putText(self.img, miss_notif, (x+(w//2)-10, y+(h//2)-10), cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
-                            
+                        if objCor>=8: objectType= "circle"
                         else:
-                            cv.putText(self.img, hit_notif, (x+(w//2)-10, y+(h//2)-10),cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                            objectType="not_target"
+                        
+                        #print(f"distance between = {self.c_vector-(self.t_radius-10)}")
+
+                        if objectType == "circle":
+                            if self.c_vector >= self.t_radius:
+                                cv.putText(self.img, miss_notif, (x+(w//2)-10, y+(h//2)-10), cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                                
+                            else:
+                                cv.putText(self.img, hit_notif, (x+(w//2)-10, y+(h//2)-10),cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
             
-            cv.imshow("blurred", imgBlur)
-            cv.imshow("HSV", img_hsv)
-            cv.imshow("result", imgresult)
-            cv.imshow("original", self.img)
-            
-            cv.waitKey(1)
+                
+                
+                cv.imshow("Frame", self.img)
+                #cv.imshow("blurred", imgBlur)
+                #cv.imshow("HSV", img_hsv)
+                #cv.imshow("result", imgresult)
+                #cv.imshow("original", self.img)
+                key=cv.waitKey(1) & 0xFF
+                
+                
+                rawCapture.truncate(0)
     
     def create_cross(self, size=2, vposx=0, vposy=0, drop=0): #drop uses physics to see how much lower it'll be
         """when called, alter CH position; first box is where bow aiming,

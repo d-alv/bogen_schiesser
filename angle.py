@@ -39,6 +39,7 @@ class Angle:
         return self.rad
 
     def analog_read(self):
+        print("reading")
         self.discharge()
         return self.charge_time()
 
