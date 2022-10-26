@@ -41,11 +41,11 @@ class RunThrough():
         cv.namedWindow("trackbars", cv.WINDOW_NORMAL)
         cv.resizeWindow("trackbars", 240, 240)
         #########################################
-        cv.createTrackbar("Hue Min", "trackbars", 127,179, self.empty)
-        cv.createTrackbar("Hue Max", "trackbars",171,179, self.empty)
-        cv.createTrackbar("Sat Min", "trackbars",31,255, self.empty)
-        cv.createTrackbar("Sat Max", "trackbars",255,255, self.empty)
-        cv.createTrackbar("Val Min", "trackbars",161,255, self.empty)
+        cv.createTrackbar("Hue Min", "trackbars", 149,179, self.empty)
+        cv.createTrackbar("Hue Max", "trackbars",168,179, self.empty)
+        cv.createTrackbar("Sat Min", "trackbars",85,255, self.empty)
+        cv.createTrackbar("Sat Max", "trackbars",239,255, self.empty)
+        cv.createTrackbar("Val Min", "trackbars",107,255, self.empty)
         cv.createTrackbar("Val Max", "trackbars",255,255, self.empty)
         #########################################
 
@@ -72,10 +72,6 @@ class RunThrough():
             
             for frame in self.camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
                 self.img = frame.array
-                
-                
-                
-                
 
                 #self.img = frame.read()
                 #if ret == False:
@@ -122,13 +118,25 @@ class RunThrough():
 
                         self.calc_distance(width=w)
 
-                        self.tarx, self.tary = (x +(w//2)), ((y)-(h//2))
+                        self.tarx, self.tary = (x +(w//2)), (y-(h//2)) #get center of target
 
-                        self.c_vector = int(math.sqrt(int((((300-self.tary))**2)+
-                                            (((400 - self.tarx))**2)))) #measures in accordance to 
+                        #self.c_vector = int(math.sqrt(int((((self.THy-self.tary))**2)+
+                                            #(((self.THx - self.tarx))**2)))) #measures in accordance to 
                                             # center of screen ^^^^^
-                        self.t_radius = int(math.sqrt(int((abs(self.tary-((y+h)//4)**2) + 
-                                            (abs(self.tarx-((x+w)//4))**2)))))
+                        if self.THx >= int(x+(w*.25)) and self.THx <= x+int((w*.75)):
+                            c_xcheck=True
+                        else:
+                            c_xcheck=False
+                        if self.THy >= int(y+(h*.25)) and self.THy <= y+(h*.75):
+                            c_ycheck=True
+                        else:c_ycheck=False
+                        
+                        #print(f"c_vector = {self.c_vector}")
+                        #self.t_radius = int(math.sqrt(int((abs(self.tary-(y+(h//4))**2) + 
+                                           # (abs(self.tarx-(x+(w//4)))**2)))))
+                        #print("eq check")
+                        #print(self.tary-(y+(h//4)))
+                        #print(f"t_radius= {self.t_radius}")
                                     
 
                         # print(self.c_vector, self.t_radius)
@@ -155,11 +163,12 @@ class RunThrough():
                         #print(f"distance between = {self.c_vector-(self.t_radius-10)}")
 
                         if objectType == "circle":
-                            if self.c_vector >= self.t_radius:
-                                cv.putText(self.img, miss_notif, (x+(w//2)-10, y+(h//2)-10), cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                            if c_xcheck and c_ycheck:
+                                cv.putText(self.img, hit_notif, (x+(w//2)-10, y+(h//2)-10),cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
                                 
                             else:
-                                cv.putText(self.img, hit_notif, (x+(w//2)-10, y+(h//2)-10),cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                                cv.putText(self.img, miss_notif, (x+(w//2)-10, y+(h//2)-10), cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                                
             
                 
                 
