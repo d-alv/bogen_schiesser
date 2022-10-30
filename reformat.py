@@ -6,6 +6,7 @@ import numpy as np
 import math
 from physics import PH
 from angle import Angle
+from buzz import Buzzing
 import time
 from picamera.array import PiRGBArray
 from picamera import PiCamera
@@ -16,8 +17,9 @@ class RunThrough():
 
     def __init__(self):
         """initialize variables"""
-        self.url = 'http://192.168.169.194/cam-hi.jpg'
         self.x =0 #iterator
+        self.set=False # checks if on targ already
+        self.g = 0 # helps stop buzzer
         self.max_a = 9000
         self.min_a = 100
         self.tarx = 0
@@ -31,12 +33,20 @@ class RunThrough():
         self.distance = 0
         self.real_ang = 1.5211059
         self.Angle = Angle()
+        self.Buzzing=Buzzing()
         self.camera=PiCamera()
 
     def empty(self, x):
         pass
 
     def setup(self):
+
+        self.camera.awb_mode = 'off'
+        self.camera.awb_gains = 1.0
+        self.camera.exposure_mode='sports'
+        
+        #self.camera.iso=800
+        self.camera.rotation = 270 # 0, 90, 180, and 270 accepted
 
         cv.namedWindow("trackbars", cv.WINDOW_NORMAL)
         cv.resizeWindow("trackbars", 240, 240)
@@ -52,12 +62,7 @@ class RunThrough():
     def runner(self):
         cv.startWindowThread()
         self.setup()
-        #frame = cv.VideoCapture(0)
-        #frame_width = 800
-        #frame_height = 600
-        #frame.set(3, frame_width)
-        #frame.set(4, frame_height)
-        #time.sleep(1)
+        
         
         
         
@@ -72,16 +77,8 @@ class RunThrough():
             
             for frame in self.camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
                 self.img = frame.array
+                self.g+=1
 
-                #self.img = frame.read()
-                #if ret == False:
-                    #print("not getting signal from camera!")
-                    #break
-                #print(self.Angle.analog_read()) #STOPS PROGRAM!!!
-                #print("after angle")
-                # img_resp=urllib.request.urlopen(self.url)
-                # imgnp=np.array(bytearray(img_resp.read()), dtype=np.uint8)
-                # self.img=cv.imdecode(imgnp, -1)
 
                 imgBlur = cv.GaussianBlur(self.img, (7,7), 1)
                 #print("after blur")
@@ -102,15 +99,14 @@ class RunThrough():
                 imgresult = cv.bitwise_and(self.img, self.img, mask=mask)
 
                 cnts, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-                #print("got here")
                 for c in cnts:
                     area = cv.contourArea(c)
                     if self.max_a >area and area>self.min_a:
                         
                         cv.drawContours(self.img, [c], -1, (255,0,0), 1)
                         M = cv.moments(c)
-                        cx = int(M["m10"]/ M["m00"])
-                        cy = int(M["m01"]/ M["m00"])
+                        #cx = int(M["m10"]/ M["m00"]) #if other doesn't work, try this centroid relation
+                        #cy = int(M["m01"]/ M["m00"])
                         peri = cv.arcLength(c, True)
                         approx = cv.approxPolyDP(c, .02*peri, True)
                         objCor = len(approx)
@@ -120,9 +116,6 @@ class RunThrough():
 
                         self.tarx, self.tary = (x +(w//2)), (y-(h//2)) #get center of target
 
-                        #self.c_vector = int(math.sqrt(int((((self.THy-self.tary))**2)+
-                                            #(((self.THx - self.tarx))**2)))) #measures in accordance to 
-                                            # center of screen ^^^^^
                         if self.THx >= int(x+(w*.25)) and self.THx <= x+int((w*.75)):
                             c_xcheck=True
                         else:
@@ -130,19 +123,6 @@ class RunThrough():
                         if self.THy >= int(y+(h*.25)) and self.THy <= y+(h*.75):
                             c_ycheck=True
                         else:c_ycheck=False
-                        
-                        #print(f"c_vector = {self.c_vector}")
-                        #self.t_radius = int(math.sqrt(int((abs(self.tary-(y+(h//4))**2) + 
-                                           # (abs(self.tarx-(x+(w//4)))**2)))))
-                        #print("eq check")
-                        #print(self.tary-(y+(h//4)))
-                        #print(f"t_radius= {self.t_radius}")
-                                    
-
-                        # print(self.c_vector, self.t_radius)
-
-                        hit_notif = "hit"
-                        miss_notif = "miss"
 
                         cv.rectangle(self.img, (x,y), (x+w, y+h), (0,255,0), 1)
 
@@ -151,32 +131,37 @@ class RunThrough():
                                     (int(x+(w*.75)), int(y+(h*.75))), (0, 0, 255), 1)
 
                         self.calc_distance(width=w)
-                        # self.calc_arrow_drop(y_val=h)
-                        #print(self.calc_arrow_drop(y_val=h))
-                        #
                         self.create_cross(drop=self.calc_arrow_drop(y_val=h))
 
                         if objCor>=8: objectType= "circle"
                         else:
                             objectType="not_target"
-                        
-                        #print(f"distance between = {self.c_vector-(self.t_radius-10)}")
+
+                        net_distance = int(math.sqrt(((self.THy - self.tary )**2) + ((self.THx - self.tarx)**2)))
 
                         if objectType == "circle":
+                            self.g = self.Buzzing.x+1
                             if c_xcheck and c_ycheck:
-                                cv.putText(self.img, hit_notif, (x+(w//2)-10, y+(h//2)-10),cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                                
+                                cv.putText(self.img, "hit", (x+(w//2)-10, y+(h//2)-10),cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                                if self.set==False:
+                                    self.Buzzing.buzz_now(net_distance,True)
+                                    self.set=True
+                                
+                                
                                 
                             else:
-                                cv.putText(self.img, miss_notif, (x+(w//2)-10, y+(h//2)-10), cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                                self.set=False
                                 
-            
+                                #self.Buzzing.buzz_now(net_distance)
+                                cv.putText(self.img, "miss", (x+(w//2)-10, y+(h//2)-10), cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
+                                
                 
-                
+                if self.g != self.Buzzing.x:self.Buzzing.buzz_not()
+                            
+                cv.imshow("result", imgresult)
+                cv.imshow("HSV", img_hsv)
                 cv.imshow("Frame", self.img)
-                #cv.imshow("blurred", imgBlur)
-                #cv.imshow("HSV", img_hsv)
-                #cv.imshow("result", imgresult)
-                #cv.imshow("original", self.img)
                 key=cv.waitKey(1) & 0xFF
                 
                 
