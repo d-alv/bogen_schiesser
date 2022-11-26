@@ -98,7 +98,7 @@ class RunThrough():
                 
                 self.get_masks(img_hsv)
 
-                if self.g != self.Buzzing.x:self.Buzzing.buzz_not()
+                if self.g != self.Buzzing.x:self.Buzzing.no_targ()
 
                 #cv.imshow("result", imgresult)
                 cv.imshow("HSV", img_hsv)
@@ -151,11 +151,13 @@ class RunThrough():
                     if net_distance<100:
                         self.get_rectangles(x, y, w, h)
                         self.pos_calculations(x,y,w,h)
+                        # position calculations based on target as a whole
+                        # not on the red dot inside the target
 
     def pos_calculations(self, x,y,w,h):
         """calculates distance/ if hit or miss/"""
         self.calc_distance(w=w, h=h)
-        self.create_cross(drop=self.calc_arrow_drop(y_val=h))
+        self.create_cross(drop=self.calc_arrow_drop(h))
         self.tarx, self.tary = (x +(w//2)), (y-(h//2)) #get center of target
 
         if self.THx >= int(x+(w*.25)) and self.THx <= x+int((w*.75)):
@@ -200,14 +202,12 @@ class RunThrough():
 
 
     def calc_distance(self, w, h):
-       
-        w=w*2
+
         print(f"w is {w}")
         tar_size=.508 # meters
         total_x = (800/w)*tar_size
         print("total x")
         print(total_x)
-        h=h*2 
         total_y = (600//h)*tar_size # fits 20 times, adjust this for what a distance of 20 is
         z_h=(total_x/math.sin(self.hor_fov))*math.sin(self.hor_rem)
         print(z_h)
@@ -215,16 +215,20 @@ class RunThrough():
         print(f"dist is {dist}")
         z_v=(total_y/math.sin(self.ver_fov))*math.sin(self.ver_rem)
         dist2 = math.cos(self.ver_fov/2)*z_v
+
+        # average distances determined through Y and X to get idea # 
+        self.distance= (dist+dist2)/2
         if self.x==5:
             print(f"currently at distance {self.distance}")
             self.x=0
         
 
-    def calc_arrow_drop(self, y_val): #y_val is the y distance value for target: h 
+    def calc_arrow_drop(self, h): #y_val is the y distance value for target: h 
         """grabs the angle and the velocity to find how far the 
         arrow will fall from the distance to the target
-        
-        lots of conversion between feet and pixels"""
+        conversion between feet and pixels"""
+        tar_size=.508 # meters
+        total_y = (600//h)*tar_size # now in meters
 
         #grab the angle from the other program
         t_t_h = self.distance/self.PH.calc_speed() #stands for time to hit // I don't think this works
@@ -234,20 +238,12 @@ class RunThrough():
         elif self.Angle.rad<0:
             upward_vel = -1*upward_vel
 
-        dist_lower =  (t_t_h*upward_vel) + (.5*(-9.81)*(t_t_h**2))
-
         # dist_lower value is negative, meaning just add it to the other stuff
-
-
         #convert actual distance to pixels on screen, based on how far away I'm standing. 
+        
+        dist_lower =  (t_t_h*upward_vel) + (.5*(-9.81)*(t_t_h**2)) # in meters
+        pixels_down = (dist_lower/total_y) * 600 # should convert the feet to pixels
 
-        # GO HOME && MEASURE THE X AND Y AXIS OF TARGET (PINK PART) AND COMPARE THAT 
-        # at the 11 meters it should mean .2921 meters is 17 pxls or whatever
-        y = math.tan(self.real_ang)*self.dist_angle
-
-        # not sure how this works ^ check later
-
-        pixels_down = (y_val*dist_lower)/y
         return(int(pixels_down))
 
 if __name__ == "__main__":
