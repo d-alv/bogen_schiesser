@@ -28,24 +28,25 @@ class Angle:
 
         x=1851.851 #iterator of sorts, every 1851 is next degree
 
-        absolute_degree = 0 #set to perfectly straight
-        degree = (count/x)-81
-        if degree >0:
-            degree = 0-degree
-        else:
-            degree = 0-degree #if negative, turns positive
+        absolute_degree = 0 #set to perfectly straight 0 @ 20000
+        degree = (count/x)-23
+        degree = -degree-16
+        
 
-        self.rad = degree#(degree/180)*math.pi
+        self.rad = (degree/180)*math.pi
+        
         return self.rad
 
     def analog_read(self):
         #print("reading")
+        #time.sleep(.5)
         self.discharge()
-        return self.charge_time()
+        self.charge_time()
+        return self.rad
 
 
 #dog = Angle()
 #while True:
     
-    #print(f"currently at {dog.analog_read()} degrees")
-    #time.sleep(1)
+ #   print(f"currently at {dog.analog_read()} degrees")
+  #  time.sleep(.5)

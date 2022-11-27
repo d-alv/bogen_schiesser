@@ -40,7 +40,7 @@ class RunThrough():
         self.ver_fov = .72274
         self.ver_rem = 1.2094
         self.ratio=0
-        self.one_targ = False
+        self.THdrop = 0
         
 
 
@@ -71,7 +71,7 @@ class RunThrough():
 
 
     def runner(self):
-        cv.startWindowThread()
+        #cv.startWindowThread()
         self.setup()
         
         self.camera.resolution = (800, 600)
@@ -107,8 +107,8 @@ class RunThrough():
                 if self.g != self.Buzzing.x:self.Buzzing.no_targ()
 
                 #cv.imshow("result", imgresult)
-                cv.imshow("HSV", img_hsv)
-                cv.imshow("Frame", self.img)
+                #cv.imshow("HSV", img_hsv)
+                #cv.imshow("Frame", self.img)
                 key=cv.waitKey(1) & 0xFF
                 rawCapture.truncate(0)
 
@@ -181,7 +181,7 @@ class RunThrough():
             c_xcheck=True
         else:
             c_xcheck=False
-        if self.THy >= int(y+(h*.25)) and self.THy <= y+(h*.75):
+        if self.THdrop >= int(y+(h*.25)) and self.THdrop <= y+(h*.75):
             c_ycheck=True
         else:c_ycheck=False
         net_distance = int(math.sqrt(((self.THy - self.tary )**2) + ((self.THx - self.tarx)**2)))
@@ -214,8 +214,10 @@ class RunThrough():
         cv.rectangle(self.img, (self.THx-1+vposx, self.THy-1+vposy),
                     (self.THx+1+vposx, self.THy+1+vposy), (255, 0, 0), size)
 
-        cv.rectangle(self.img, (self.THx-1+vposx, self.THy-1+vposy+drop),
-                    (self.THx+1+vposx, self.THy+1+vposy+drop), (0, 255, 0), size)
+        cv.rectangle(self.img, (self.THx-1+vposx, self.THy-1+vposy-drop),
+                    (self.THx+1+vposx, self.THy+1+vposy-drop), (0, 255, 0), size)
+        self.THdrop = self.THy-drop
+        print(f"drop is: {drop}")
 
 
     def calc_distance(self, w, h):
@@ -248,16 +250,16 @@ class RunThrough():
 
         #grab the angle from the other program
         t_t_h = self.distance/self.PH.calc_speed() #stands for time to hit // I don't think this works
-        upward_vel = self.PH.calc_speed()*math.sin(abs(self.Angle.rad))
-        if self.Angle.rad >0:
-            pass
-        elif self.Angle.rad<0:
-            upward_vel = -1*upward_vel
+        
+        print(f"time to hit is {t_t_h}")
+        upward_vel = self.PH.calc_speed()*math.sin(0)
+       
 
         # dist_lower value is negative, meaning just add it to the other stuff
         #convert actual distance to pixels on screen, based on how far away I'm standing. 
         
         dist_lower =  (t_t_h*upward_vel) + (.5*(-9.81)*(t_t_h**2)) # in meters
+        print(f"distance lower: {dist_lower}")
         pixels_down = dist_lower*self.ratio  # should convert the feet to pixels
 
         return(int(pixels_down))
