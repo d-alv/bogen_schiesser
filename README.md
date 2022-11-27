@@ -8,5 +8,8 @@ using trigonometric principles to calculate the arrow's predicted trajectory.
 
 AS OF LATEST UPDATE
 
-Trajectory system is flawed - beeps come too late and the arrow flies lower than expected - 
-possibly due to position of arrow knock on string?
+Trajectory fixed, can function without monitor - LED shows accuracy level. 
+##############################
+What's next? 
+##############################
+Precision will be adjustable, based on how much help is wanted. High - hits middle of target, medium = general middle, low - only alerts if missing target completely
