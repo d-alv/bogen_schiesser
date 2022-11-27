@@ -40,6 +40,8 @@ class RunThrough():
         self.ver_fov = .72274
         self.ver_rem = 1.2094
         self.ratio=0
+        self.one_targ = False
+        
 
 
     def empty(self, x):
@@ -53,17 +55,19 @@ class RunThrough():
         self.camera.rotation = 270 # 0, 90, 180, and 270 accepted
 
 
-        cv.namedWindow("trackbars", cv.WINDOW_NORMAL)
-        cv.resizeWindow("trackbars", 240, 240)
+        #cv.namedWindow("trackbars", cv.WINDOW_NORMAL)
+        #cv.resizeWindow("trackbars", 240, 240)
         #########################################
-        cv.createTrackbar("Hue Min", "trackbars", 149,179, self.empty)
-        cv.createTrackbar("Hue Max", "trackbars",168,179, self.empty)
-        cv.createTrackbar("Sat Min", "trackbars",85,255, self.empty)
-        cv.createTrackbar("Sat Max", "trackbars",239,255, self.empty)
-        cv.createTrackbar("Val Min", "trackbars",107,255, self.empty)
-        cv.createTrackbar("Val Max", "trackbars",255,255, self.empty)
+        #cv.createTrackbar("Hue Min", "trackbars", 149,179, self.empty)
+        #cv.createTrackbar("Hue Max", "trackbars",168,179, self.empty)
+        #cv.createTrackbar("Sat Min", "trackbars",85,255, self.empty)
+        #cv.createTrackbar("Sat Max", "trackbars",239,255, self.empty)
+        #cv.createTrackbar("Val Min", "trackbars",107,255, self.empty)
+        #cv.createTrackbar("Val Max", "trackbars",255,255, self.empty)
         #########################################
-
+        
+        
+        # IF NEED CHANGE COLOR CONFIGS, LOOK UP HERE ^^^
 
 
     def runner(self):
@@ -124,12 +128,16 @@ class RunThrough():
 
     def get_contour(self, mask, ID):
         """possible problem: might be too slow of a process"""
+        
+        targ_dict={}
         cnts, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         if ID==1: self.max_a, self.min_a = 5000, 500
         else: self.max_a, self.min_a = 10000, 100
         for c in cnts:
             area = cv.contourArea(c)
             if self.max_a >area and area>self.min_a:
+                #figure out how many qualify and are here
+                
                         
                 cv.drawContours(self.img, [c], -1, (255,0,0), 1)
                 M = cv.moments(c)
@@ -140,21 +148,28 @@ class RunThrough():
                 objCor = len(approx)
                 x, y, w, h = cv.boundingRect(approx)
                 self.cb[ID-1]= [x, y, x+w, y+h]
-
+                
+                
                 if ID == 2:
                     if cx > self.cb[0][0] and cx< self.cb[0][2]:
                         if cy > self.cb[0][1] and cy< self.cb[0][3]:
                             self.get_rectangles(x,y,w,h)
 
                 else:
+                    
                     print(objCor)
                     net_distance = int(math.sqrt(((self.THy - cy )**2) + ((self.THx - cx)**2)))
+                    targ_dict[net_distance]=[x,y,w,h]
                     
-                    if net_distance<100:
-                        self.get_rectangles(x, y, w, h)
-                        self.pos_calculations(x,y,w,h)
-                        # position calculations based on target as a whole
-                        # not on the red dot inside the target
+        if not targ_dict.keys():
+            pass
+        else:
+            v = targ_dict[min(targ_dict.keys())]
+            self.get_rectangles(v[0],v[1],v[2],v[3])
+            self.pos_calculations(v[0],v[1],v[2],v[3])
+        
+                    
+    
 
     def pos_calculations(self, x,y,w,h):
         """calculates distance/ if hit or miss/"""
@@ -175,12 +190,12 @@ class RunThrough():
         if c_xcheck and c_ycheck:
                                 
             cv.putText(self.img, "hit", (x+(w//2)-10, y+(h//2)-10),cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)
-            if self.set==False:
-                self.Buzzing.buzz_now(net_distance,True)
-                self.set=True
+            #if self.set==False:
+            self.Buzzing.buzz_now(net_distance,True)
+                #self.set=True
                             
         else:
-            self.set=False
+            #self.set=False
                                 
             self.Buzzing.buzz_now(net_distance)
             cv.putText(self.img, "miss", (x+(w//2)-10, y+(h//2)-10), cv.FONT_HERSHEY_COMPLEX, .5, (0,0,255), 2)

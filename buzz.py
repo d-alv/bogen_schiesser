@@ -17,10 +17,11 @@ class Buzzing:
     def buzz_now(self, net_pos, hit=False):
         """uses net position to determine freq
         and hit plays a double beep when on target"""
+        self.x+=1
 
         if not hit:
-            if net_pos <100:
-                point = float(-net_pos/100)+1
+            if net_pos <200:
+                point = float(-net_pos/200)+1
                 #smaller net position = greener
                 # point represents green, green and red are inverse
                 self.color[1] = round(point, 2)
