@@ -10,7 +10,8 @@ class Buzzing:
     if the bow is close to target"""
     def __init__(self):
         self.led = RGBLED(21, 20, 26) #bottom_right pin, 20= one above it, and 26 = one left to 20
-        self.color= (0,0,0)
+        self.color= [0,0,0]
+        self.x=0
         # if no target detected = blue, if missing = red, if on target = green
 
     def buzz_now(self, net_pos, hit=False):
@@ -18,19 +19,20 @@ class Buzzing:
         and hit plays a double beep when on target"""
 
         if not hit:
-
-            point = float(-net_pos/100)+1
-            #smaller net position = greener
-            # point represents green, green and red are inverse
-            self.color[1] = round(point, 2)
-            self.color[0] = round(1/point, 2)
-            self.led.color = self.color
+            if net_pos <100:
+                point = float(-net_pos/100)+1
+                #smaller net position = greener
+                # point represents green, green and red are inverse
+                self.color[1] = round(point, 2)
+                self.color[0] = round(1-point, 2)
+                print(self.color)
+                color= tuple(self.color)
+                self.led.color = color
+            else:
+                self.led.color=(0,0,1)
 
         else: 
             self.led.color = (0, 1, 0)
-
-            self.buzz.max_tone() #not sure how this one works
-            self.buzz.min_tone()
 
     def no_targ(self):
         self.led.color=(0,0,1) #blue

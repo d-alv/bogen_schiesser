@@ -1,5 +1,3 @@
-""" pay attention to 91 and 92"""
-
 import cv2 as cv
 import urllib.request
 import numpy as np
@@ -41,6 +39,7 @@ class RunThrough():
         self.hor_rem=1.1039 # 2pi - hor_fov / 2
         self.ver_fov = .72274
         self.ver_rem = 1.2094
+        self.ratio=0
 
 
     def empty(self, x):
@@ -97,6 +96,9 @@ class RunThrough():
                 #self.ct[5] = cv.getTrackbarPos("Val Max", "trackbars")
                 
                 self.get_masks(img_hsv)
+                #cv.rectangle(self.img, (self.THx-1, self.THy-1),
+                 #   (self.THx+1, self.THy+1), (255, 0, 0), 2)
+                # REMEMBER TO DELETE THIS:: TEST ONLY
 
                 if self.g != self.Buzzing.x:self.Buzzing.no_targ()
 
@@ -209,6 +211,7 @@ class RunThrough():
         print("total x")
         print(total_x)
         total_y = (600//h)*tar_size # fits 20 times, adjust this for what a distance of 20 is
+        self.ratio=h/tar_size
         z_h=(total_x/math.sin(self.hor_fov))*math.sin(self.hor_rem)
         print(z_h)
         dist=math.cos(self.hor_fov/2)*z_h
@@ -227,8 +230,6 @@ class RunThrough():
         """grabs the angle and the velocity to find how far the 
         arrow will fall from the distance to the target
         conversion between feet and pixels"""
-        tar_size=.508 # meters
-        total_y = (600//h)*tar_size # now in meters
 
         #grab the angle from the other program
         t_t_h = self.distance/self.PH.calc_speed() #stands for time to hit // I don't think this works
@@ -242,7 +243,7 @@ class RunThrough():
         #convert actual distance to pixels on screen, based on how far away I'm standing. 
         
         dist_lower =  (t_t_h*upward_vel) + (.5*(-9.81)*(t_t_h**2)) # in meters
-        pixels_down = (dist_lower/total_y) * 600 # should convert the feet to pixels
+        pixels_down = dist_lower*self.ratio  # should convert the feet to pixels
 
         return(int(pixels_down))
 
