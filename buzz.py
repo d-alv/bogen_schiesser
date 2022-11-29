@@ -34,8 +34,8 @@ class Buzzing:
             self.x+=1
 
             if not hit:
-                if net_pos <200:
-                    point = float(-net_pos/200)+1
+                if net_pos <300:
+                    point = float(-net_pos/300)+1
                     #smaller net position = greener
                     # point represents green, green and red are inverse
                     self.color[1] = round(point, 2)

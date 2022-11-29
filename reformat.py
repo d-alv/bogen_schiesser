@@ -177,11 +177,11 @@ class RunThrough():
         self.create_cross(drop=self.calc_arrow_drop(h))
         self.tarx, self.tary = (x +(w//2)), (y-(h//2)) #get center of target
 
-        if self.THx >= int(x+(w*.25)) and self.THx <= x+int((w*.75)):
+        if self.THx >= int(x+(w*self.Buzzing.ratio)) and self.THx <= x+int((w*(1-self.Buzzing.ratio))):
             c_xcheck=True
         else:
             c_xcheck=False
-        if self.THdrop >= int(y+(h*.25)) and self.THdrop <= y+(h*.75):
+        if self.THdrop >= int(y+(h*(self.Buzzing.ratio))) and self.THdrop <= y+(h*(1-self.Buzzing.ratio)):
             c_ycheck=True
         else:c_ycheck=False
         net_distance = int(math.sqrt(((self.THy - self.tary )**2) + ((self.THx - self.tarx)**2)))
