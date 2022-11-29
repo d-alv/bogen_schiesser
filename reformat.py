@@ -82,6 +82,8 @@ class RunThrough():
 
         # self.create_cross()
         while True:
+            self.Buzzing.press_check()
+            
             
             for frame in self.camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
                 self.img = frame.array
@@ -168,8 +170,6 @@ class RunThrough():
             self.get_rectangles(v[0],v[1],v[2],v[3])
             self.pos_calculations(v[0],v[1],v[2],v[3])
         
-                    
-    
 
     def pos_calculations(self, x,y,w,h):
         """calculates distance/ if hit or miss/"""
@@ -204,8 +204,8 @@ class RunThrough():
         cv.rectangle(self.img, (x,y), (x+w, y+h), (0,255,0), 1)
 
         ############################# create precision box
-        cv.rectangle(self.img, (int(x+(w*.25)),int(y+(h*.25))), 
-        (int(x+(w*.75)), int(y+(h*.75))), (0, 0, 255), 1)
+        cv.rectangle(self.img, (int(x+(w*self.Buzzing.ratio)),int(y+(h*self.Buzzing.ratio))), 
+        (int(x+(w*(1-self.Buzzing.ratio))), int(y+(h*(1-self.Buzzing.ratio)))), (0, 0, 255), 1)
 
     
     def create_cross(self, size=2, vposx=0, vposy=0, drop=0): #drop uses physics to see how much lower it'll be
