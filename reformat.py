@@ -8,6 +8,7 @@ from buzz import Buzzing
 import time
 from picamera.array import PiRGBArray
 from picamera import PiCamera
+import sys
 
 #camera = PiCamera()
 
@@ -41,8 +42,6 @@ class RunThrough():
         self.ver_rem = 1.2094
         self.ratio=0
         self.THdrop = 0
-        
-
 
     def empty(self, x):
         pass
@@ -82,10 +81,10 @@ class RunThrough():
 
         # self.create_cross()
         while True:
-            self.Buzzing.press_check()
-            
             
             for frame in self.camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+                self.Buzzing.press_check()
+            
                 self.img = frame.array
                 self.g+=1
 
@@ -153,9 +152,14 @@ class RunThrough():
                 
                 
                 if ID == 2:
-                    if cx > self.cb[0][0] and cx< self.cb[0][2]:
-                        if cy > self.cb[0][1] and cy< self.cb[0][3]:
-                            self.get_rectangles(x,y,w,h)
+                    try:
+                        if cx > self.cb[0][0] and cx< self.cb[0][2]:
+                            if cy > self.cb[0][1] and cy< self.cb[0][3]:
+                                self.get_rectangles(x,y,w,h)
+                    except: 
+                        print("aw darn", sys.exc_info()[0],"happened")
+                        print("red detected before white :( ")
+                        pass
 
                 else:
                     
