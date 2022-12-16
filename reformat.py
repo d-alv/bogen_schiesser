@@ -1,7 +1,5 @@
-# current notes:
-# Camera stuck in low quality with decent FPS, I need to try to up the quality; as archery is not 
-# fun in the cold, I may save later updates on this project for a later date when it gets warmer outside?
-# contour method could be more efficient - could reuse some variables throughout
+## want to add bluetooth feature where phone can provide it with windspeed - 
+# but this may be too great an approximation
 
 import cv2 as cv
 import urllib.request
@@ -25,15 +23,17 @@ class RunThrough():
         self.set=False # checks if on targ already
         self.g = 0 # helps stop buzzer
         self.max_a = 9000
-        self.min_a = 100 #area stuff
+        self.min_a = 100
         self.tarx = 0
         self.tary = 0
         self.c_vector = 0
         self.t_radius = 0
         self.THx = 400
         self.THy = 300
+        self.dist_angle = 1.051650213
         self.PH = PH()
         self.distance = 0
+        self.real_ang = 1.5211059
         self.Angle = Angle()
         self.Buzzing=Buzzing()
         self.camera=PiCamera()
@@ -160,8 +160,8 @@ class RunThrough():
                             if cy > self.cb[0][1] and cy< self.cb[0][3]:
                                 self.get_rectangles(x,y,w,h)
                     except: 
-                        print("aw darn", sys.exc_info()[0],"happened")
-                        print("red detected before white :( ")
+                        print("aw darn", sys.exc_info()[0])
+                        print("red detected before white")
                         pass
 
                 else:
@@ -179,7 +179,7 @@ class RunThrough():
         
 
     def pos_calculations(self, x,y,w,h):
-        """calculates distance/ if hit or miss/"""
+        """calculates distance/ if hit or miss"""
         self.calc_distance(w=w, h=h)
         self.create_cross(drop=self.calc_arrow_drop(h))
         self.tarx, self.tary = (x +(w//2)), (y-(h//2)) #get center of target
@@ -228,18 +228,12 @@ class RunThrough():
 
 
     def calc_distance(self, w, h):
-
-        print(f"w is {w}")
         tar_size=.508 # meters
         total_x = (800/w)*tar_size
-        print("total x")
-        print(total_x)
         total_y = (600//h)*tar_size # fits 20 times, adjust this for what a distance of 20 is
         self.ratio=h/tar_size
         z_h=(total_x/math.sin(self.hor_fov))*math.sin(self.hor_rem)
-        print(z_h)
         dist=math.cos(self.hor_fov/2)*z_h
-        print(f"dist is {dist}")
         z_v=(total_y/math.sin(self.ver_fov))*math.sin(self.ver_rem)
         dist2 = math.cos(self.ver_fov/2)*z_v
 
@@ -250,23 +244,20 @@ class RunThrough():
             self.x=0
         
 
-    def calc_arrow_drop(self, h): #y_val is the y distance value for target: h 
+    def calc_arrow_drop(self, h): # h is height of target
         """grabs the angle and the velocity to find how far the 
         arrow will fall from the distance to the target
         conversion between feet and pixels"""
 
-        #grab the angle from the other program
         t_t_h = self.distance/self.PH.calc_speed() #stands for time to hit // I don't think this works
         
-        print(f"time to hit is {t_t_h}")
         upward_vel = self.PH.calc_speed()*math.sin(0)
-       
+
 
         # dist_lower value is negative, meaning just add it to the other stuff
-        #convert actual distance to pixels on screen, based on how far away I'm standing. 
+        #convert actual distance to pixels on screen, based on how far away I am
         
         dist_lower =  (t_t_h*upward_vel) + (.5*(-9.81)*(t_t_h**2)) # in meters
-        print(f"distance lower: {dist_lower}")
         pixels_down = dist_lower*self.ratio  # should convert the feet to pixels
 
         return(int(pixels_down))
