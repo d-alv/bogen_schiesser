@@ -1,3 +1,8 @@
+# current notes:
+# Camera stuck in low quality with decent FPS, I need to try to up the quality; as archery is not 
+# fun in the cold, I may save later updates on this project for a later date when it gets warmer outside?
+# contour method could be more efficient - could reuse some variables throughout
+
 import cv2 as cv
 import urllib.request
 import numpy as np
@@ -20,17 +25,15 @@ class RunThrough():
         self.set=False # checks if on targ already
         self.g = 0 # helps stop buzzer
         self.max_a = 9000
-        self.min_a = 100
+        self.min_a = 100 #area stuff
         self.tarx = 0
         self.tary = 0
         self.c_vector = 0
         self.t_radius = 0
         self.THx = 400
         self.THy = 300
-        self.dist_angle = 1.051650213
         self.PH = PH()
         self.distance = 0
-        self.real_ang = 1.5211059
         self.Angle = Angle()
         self.Buzzing=Buzzing()
         self.camera=PiCamera()
