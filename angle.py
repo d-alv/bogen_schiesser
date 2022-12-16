@@ -1,3 +1,7 @@
+# as far as I can tell, this file will not be used anymore
+#this is because i do not believe the angle is very important to be measured for the bow unless at 
+# VERY sharp angles - likely not come back to this file
+
 import RPi.GPIO as GPIO
 import time 
 import math
